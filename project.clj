@@ -3,5 +3,6 @@
                   [org.clojure/clojure-contrib "1.2.0"]
                   [org.apache.lucene/lucene-core "2.9.2"]
                   [org.apache.lucene/lucene-highlighter "2.9.2"]]
+  :disable-implicit-clean true
   :namespaces :all
   :main nihsearch)
