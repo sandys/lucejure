@@ -40,13 +40,12 @@
 (defn index [^File file]
   (let [#^Document doc (Document.)
         pf (parse-file file)]
-    (.add doc (Field. "id" (:id pf) Field$Store/YES Field$Index/ANALYZED))
-    (.add doc (Field. "msg" (:msg pf) Field$Store/YES Field$Index/ANALYZED)) 
     ;(with-open [iw ( doto (IndexWriter. (FSDirectory/getDirectory "/tmp/2") (StandardAnalyzer.) IndexWriter$MaxFieldLength/UNLIMITED)
-    (with-open [iw ( doto (IndexWriter. (FSDirectory/open (File. "/tmp/2")) (StandardAnalyzer. Version/LUCENE_30) IndexWriter$MaxFieldLength/UNLIMITED)
+    (with-open [iw   (IndexWriter. (FSDirectory/open (File. "/tmp/2")) (StandardAnalyzer. Version/LUCENE_30) IndexWriter$MaxFieldLength/LIMITED
                           ;(.setRAMBufferSizeMB 20)
                           ;(.setUseCompoundFile false)
-                          )  ](.updateDocument iw (Term. "id" (:id pf)) doc) )))
+                          )  ](.addDocument iw  (doto doc (.add (Field. "path" (.getPath file)  Field$Store/YES Field$Index/NOT_ANALYZED))
+                                                          (.add (Field. "contents" (:msg pf) Field$Store/YES Field$Index/ANALYZED ) ))) )))
 
 (defn sem-index [^File file]
   (BuildIndex/main (into-array String ["/tmp/2" ])))
