@@ -8,9 +8,9 @@ How to use this code
 How to create indexes manually (for verification)
 =================================================
 1. Lucene index creation 
-    cd /tmp/3/; java -cp /home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar org.apache.lucene.demo.IndexFiles /home/user/Documents/articles/BMC_Clin_Pharmacol
+     cd /tmp/3/; java -cp /home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar org.apache.lucene.demo.IndexFiles /home/user/Documents/articles/BMC_Clin_Pharmacol
 2. SemanticVector index creation
-    java -cp /home/user/research/search/3/lib/semanticvectors-1.30.jar:/home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar pitt.search.semanticvectors.BuildIndex  /tmp/3/index
+     java -cp /home/user/research/search/3/lib/semanticvectors-1.30.jar:/home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar pitt.search.semanticvectors.BuildIndex  /tmp/3/index
 3. SemanticVector search
-    java -cp /home/user/research/search/3/lib/semanticvectors-1.30.jar:/home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar pitt.search.semanticvectors.Search agreements  -luceneindexpath /tmp/3/index
+     java -cp /home/user/research/search/3/lib/semanticvectors-1.30.jar:/home/user/research/search/3/lib/lucene-core-3.0.0.jar:/home/user/research/search/lucene-3.0.2/lucene-demos-3.0.2.jar pitt.search.semanticvectors.Search agreements  -luceneindexpath /tmp/3/index
 
