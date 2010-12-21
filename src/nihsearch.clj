@@ -1,6 +1,6 @@
 (ns nihsearch
-  (:import (org.apache.lucene.index IndexReader IndexWriter
-                                    IndexWriter$MaxFieldLength Term)
+  (:import (org.apache.lucene.index IndexReader$FieldOption IndexReader IndexWriter
+                                    IndexWriter$MaxFieldLength Term CorruptIndexException)
            (org.apache.lucene.search IndexSearcher BooleanQuery
                                      PhraseQuery BooleanClause$Occur TermQuery)
            (org.apache.lucene.document Document Field Field$Store
@@ -13,8 +13,8 @@
            (org.apache.lucene.queryParser QueryParser$Operator
                                           MultiFieldQueryParser)
            (org.apache.lucene.util Version)
-           (java.io File File PushbackReader)
-           (java.io.FileNotFoundException))
+           (java.util Collection Random)
+           (java.io File File PushbackReader IOException FileNotFoundException ))
   (:import [pitt.search.semanticvectors BuildIndex])
   (:use clojure.contrib.duck-streams
         clojure.contrib.str-utils
@@ -24,6 +24,22 @@
 
 
 (def *config* nil)
+
+
+(defn cljTermTermVectorsFromLucene [indexDir seedLength minFreq nonAlphabet windowSize basicTermVectors fieldsToIndex]
+;correct place for validation of arguments is in pre-conditions
+ (do  
+    (with-open [iw   (IndexWriter. (FSDirectory/open (File. (str indexDir))) (StandardAnalyzer. Version/LUCENE_30) false IndexWriter$MaxFieldLength/LIMITED)]
+          (try (.optimize iw)
+            (catch CorruptIndexException e
+              (.printStackTrace e))))
+    (with-open [ir (IndexReader/open (FSDirectory/open (File. indexDir)))] 
+      (let [^Collection fields_with_positions (.getFieldNames ir IndexReader$FieldOption/TERMVECTOR_WITH_POSITION)  random (Random.) ]
+        (when (.isEmpty fields_with_positions)
+          (throw (IOException. (str "Lucene indexes not built correctly." 
+                                    "Term-term indexing requires a Lucene index containing TermPositionVectors." 
+                                    "Try rebuilding Lucene index using pitt.search.lucene.IndexFilePositions."))))
+        ))))
 
 (defn walk [^File dir]
   (let [child (.listFiles dir)
