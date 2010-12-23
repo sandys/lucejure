@@ -25,7 +25,7 @@
 
 (def *config* nil)
 
-(defn lazy-seq-terms [terms] (lazy-seq (cons (.term terms) (lazy-seq-terms terms)) ))
+(defn lazy-seq-terms [terms] (lazy-seq (when (.next terms) (cons (.term terms) (lazy-seq-terms terms)) )))
 
 (defn cljTermFilter [term nonAlphabet fieldsToIndex] 
   (and 
