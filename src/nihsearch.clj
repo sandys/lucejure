@@ -25,6 +25,22 @@
 
 (def *config* nil)
 
+(defn lazy-seq-terms [terms] (lazy-seq (cons (.term terms) (lazy-seq-terms terms)) ))
+
+(defn cljTermFilter [term nonAlphabet fieldsToIndex] 
+  (and 
+   ;need to put stoplistContains here
+   ;need to put getGlobalTermFreq here
+    (not (> (reduce 0 
+                    (fn [accum curr] 
+                       (if (Character/isLetter curr)
+                          1 0) ) 
+                    (.text term)) nonAlphabet))
+    (first (filter (fn [d] (= 0 (.compareToIgnoreCase (.field term) d)) ) fieldsToIndex))))
+
+(defn _populateIndexVectors [ir nonAlphabet fieldsToIndex]
+  (seq (set ( filter #(println (.text %))  (lazy-seq-terms (.terms ir)) ))))
+  ;(seq (set ( filter #(cljTermFilter % nonAlphabet fieldsToIndex)  (lazy-seq-terms (.terms ir)) ))))
 
 (defn cljTermTermVectorsFromLucene [indexDir seedLength minFreq nonAlphabet windowSize basicTermVectors fieldsToIndex]
 ;correct place for validation of arguments is in pre-conditions
@@ -34,11 +50,13 @@
             (catch CorruptIndexException e
               (.printStackTrace e))))
     (with-open [ir (IndexReader/open (FSDirectory/open (File. indexDir)))] 
-      (let [^Collection fields_with_positions (.getFieldNames ir IndexReader$FieldOption/TERMVECTOR_WITH_POSITION)  random (Random.) ]
+      (let [^Collection fields_with_positions (.getFieldNames ir IndexReader$FieldOption/TERMVECTOR_WITH_POSITION)  
+          random (Random.) termVectors {} ]
         (when (.isEmpty fields_with_positions)
           (throw (IOException. (str "Lucene indexes not built correctly." 
                                     "Term-term indexing requires a Lucene index containing TermPositionVectors." 
                                     "Try rebuilding Lucene index using pitt.search.lucene.IndexFilePositions."))))
+        (_populateIndexVectors ir nonAlphabet fieldsToIndex)
         ))))
 
 (defn walk [^File dir]
@@ -74,5 +92,7 @@
       
            (do (println "sss " srcdir)
                ;(map index (walk (File. "/home/user/Documents/articles/BMC_Clin_Pharmacol")) )
-               (sem-index (File. "/tmp/2") )
+               ;(sem-index (File. "/tmp/2") )
+               (with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/2")))] 
+                (_populateIndexVectors ir 0 (into-array ["n"])) )
                ) ) )
