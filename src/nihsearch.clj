@@ -26,6 +26,9 @@
 
 
 (def *config* nil)
+(declare *stopset* )
+(declare *srcdir* )
+(declare *indexdir* )
 
 (defn cljLoadStopWords [stopset]
   (do
@@ -92,13 +95,13 @@
 
 (defn -main [& args] 
   (alter-var-root #'*config* (fn [_] (read (PushbackReader. (ds/reader "config.clj")))))
-  (let [{srcdir :srcdir} *config* {indexdir :indexdir} *config* {stoppath :stoppath} *config* 
-       stopset (cljLoadStopWords #{}) ]
-      
+  (binding [  *stopset* (cljLoadStopWords #{}) ] 
+    
+
     (IndexWriter/unlock (FSDirectory/open  (File. (:indexdir *config*)))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
-    (println "srcdir= " srcdir " indexdir= " indexdir "stoppath= " stoppath)
-    (map println stopset)
-    ;(map index (walk (File. (:srcdir *config*))) )
+    (println "srcdir= " (:srcdir *config*) " indexdir= " (:indexdir *config*) "stoppath= " (:stoppath *config*))
+    (map println *stopset*)
+    (map index (walk (File. (:srcdir *config*))) )
     ;(sem-index (File. "/tmp/3") )
     ;(with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/3")))] 
     ;  (_populateIndexVectors ir 0 (into-array ["n"])) )
