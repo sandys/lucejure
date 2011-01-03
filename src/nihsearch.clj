@@ -26,7 +26,6 @@
 
 
 (def *config* nil)
-(def *stoppath* nil)
 
 ;(defn cljLoadStopWords [^String stoppath]
 ;  (do
@@ -82,8 +81,7 @@
 (defn index [^File file]
   (let [#^Document doc (Document.)
         pf (parse-file file)]
-    ;(with-open [iw ( doto (IndexWriter. (FSDirectory/getDirectory "/tmp/2") (StandardAnalyzer.) IndexWriter$MaxFieldLength/UNLIMITED)
-    (with-open [iw   (IndexWriter. (FSDirectory/open (File. "/tmp/2")) (StandardAnalyzer. Version/LUCENE_30) IndexWriter$MaxFieldLength/LIMITED
+    (with-open [iw   (IndexWriter. (FSDirectory/open (File. (:indexdir *config*))) (StandardAnalyzer. Version/LUCENE_30) IndexWriter$MaxFieldLength/LIMITED
                           ;(.setRAMBufferSizeMB 20)
                           ;(.setUseCompoundFile false)
                           )  ](.addDocument iw  (doto doc (.add (Field. "path" (.getPath file)  Field$Store/YES Field$Index/NOT_ANALYZED))
@@ -94,14 +92,12 @@
 
 (defn -main [& args] 
   (alter-var-root #'*config* (fn [_] (read (PushbackReader. (ds/reader "config.clj")))))
-  ;(IndexWriter/unlock (FSDirectory/getDirectory  "/tmp/2")) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
-  (IndexWriter/unlock (FSDirectory/open  (File. "/tmp/2"))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
-  (let [{srcdir :srcdir} *config*]
+  (let [{srcdir :srcdir} *config* {indexdir :indexdir} *config* {stoppath :stoppath} *config*]
       
-    (println "sss " srcdir)
-    (alter-var-root (var *stoppath*)
-      (constantly "/tmp/stoppath"))
-    (map index (walk (File. "/home/user/Documents/articles/BMC_Clin_Pharmacol")) )
-    ;(sem-index (File. "/tmp/2") )
-    (with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/2")))] 
-    (_populateIndexVectors ir 0 (into-array ["n"])) )) )
+    (IndexWriter/unlock (FSDirectory/open  (File. (:indexdir *config*)))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
+    (println "srcdir= " srcdir " indexdir= " indexdir "stoppath= " stoppath)
+    (map index (walk (File. (:srcdir *config*))) )
+    ;(sem-index (File. "/tmp/3") )
+    ;(with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/3")))] 
+    ;  (_populateIndexVectors ir 0 (into-array ["n"])) )
+    ) )
