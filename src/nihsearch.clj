@@ -27,10 +27,10 @@
 
 (def *config* nil)
 
-;(defn cljLoadStopWords [^String stoppath]
-;  (do
-;    (println "Using stopword file: " stoppath)
-;    ()))
+(defn cljLoadStopWords [stopset]
+  (do
+    (println "Using stopword file: " (:stoppath *config*))
+    ( reduce  (fn [val coll] (conj val coll) )  stopset (ds/read-lines (:stoppath *config*) ) )))
 
 (defn lazy-seq-terms [terms] (lazy-seq (when (.next terms) (cons (.term terms) (lazy-seq-terms terms)) )))
 
@@ -92,11 +92,13 @@
 
 (defn -main [& args] 
   (alter-var-root #'*config* (fn [_] (read (PushbackReader. (ds/reader "config.clj")))))
-  (let [{srcdir :srcdir} *config* {indexdir :indexdir} *config* {stoppath :stoppath} *config*]
+  (let [{srcdir :srcdir} *config* {indexdir :indexdir} *config* {stoppath :stoppath} *config* 
+       stopset (cljLoadStopWords #{}) ]
       
     (IndexWriter/unlock (FSDirectory/open  (File. (:indexdir *config*)))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
     (println "srcdir= " srcdir " indexdir= " indexdir "stoppath= " stoppath)
-    (map index (walk (File. (:srcdir *config*))) )
+    (map println stopset)
+    ;(map index (walk (File. (:srcdir *config*))) )
     ;(sem-index (File. "/tmp/3") )
     ;(with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/3")))] 
     ;  (_populateIndexVectors ir 0 (into-array ["n"])) )
