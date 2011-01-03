@@ -16,14 +16,22 @@
            (java.util Collection Random)
            (java.io File File PushbackReader IOException FileNotFoundException ))
   (:import [pitt.search.semanticvectors BuildIndex])
-  (:use clojure.contrib.duck-streams
+  (:use 
         clojure.contrib.str-utils
-        clojure.contrib.seq-utils
+        
         clojure.contrib.def)
+  (:require [ clojure.contrib.duck-streams :as ds] 
+            [ clojure.contrib.seq-utils :as seq])
   (:gen-class))
 
 
 (def *config* nil)
+(def *stoppath* nil)
+
+;(defn cljLoadStopWords [^String stoppath]
+;  (do
+;    (println "Using stopword file: " stoppath)
+;    ()))
 
 (defn lazy-seq-terms [terms] (lazy-seq (when (.next terms) (cons (.term terms) (lazy-seq-terms terms)) )))
 
@@ -85,14 +93,15 @@
   (BuildIndex/main (into-array String ["/tmp/2" ])))
 
 (defn -main [& args] 
-  (alter-var-root #'*config* (fn [_] (read (PushbackReader. (reader "config.clj")))))
+  (alter-var-root #'*config* (fn [_] (read (PushbackReader. (ds/reader "config.clj")))))
   ;(IndexWriter/unlock (FSDirectory/getDirectory  "/tmp/2")) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
   (IndexWriter/unlock (FSDirectory/open  (File. "/tmp/2"))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
   (let [{srcdir :srcdir} *config*]
       
-           (do (println "sss " srcdir)
-               ;(map index (walk (File. "/home/user/Documents/articles/BMC_Clin_Pharmacol")) )
-               ;(sem-index (File. "/tmp/2") )
-               (with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/2")))] 
-                (_populateIndexVectors ir 0 (into-array ["n"])) )
-               ) ) )
+    (println "sss " srcdir)
+    (alter-var-root (var *stoppath*)
+      (constantly "/tmp/stoppath"))
+    (map index (walk (File. "/home/user/Documents/articles/BMC_Clin_Pharmacol")) )
+    ;(sem-index (File. "/tmp/2") )
+    (with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/2")))] 
+    (_populateIndexVectors ir 0 (into-array ["n"])) )) )
