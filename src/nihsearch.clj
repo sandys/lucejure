@@ -30,27 +30,33 @@
 (declare *srcdir* )
 (declare *indexdir* )
 
+;warning : it does not check for existence of file
 (defn cljLoadStopWords [stopset]
   (do
     (println "Using stopword file: " (:stoppath *config*))
     ( reduce  (fn [val coll] (conj val coll) )  stopset (ds/read-lines (:stoppath *config*) ) )))
 
 (defn lazy-seq-terms [terms] (lazy-seq (when (.next terms) (cons (.term terms) (lazy-seq-terms terms)) )))
+(defn lazy-seq-docs [docs] (lazy-seq (when (.next docs) (cons (.freq docs) (lazy-seq-docs docs)))))
 
-(defn cljTermFilter [term nonAlphabet fieldsToIndex] 
+(defn cljTermFilter [term ir nonAlphabet fieldsToIndex minfreq] 
   (and 
-   ;need to put stoplistContains here
-   ;need to put getGlobalTermFreq here
-    (not (> (reduce 0 
+   (not (contains? *stopset* (.text term)))
+   (not (> (reduce 0 
                     (fn [accum curr] 
                        (if (Character/isLetter curr)
                           1 0) ) 
                     (.text term)) nonAlphabet))
-    (first (filter (fn [d] (= 0 (.compareToIgnoreCase (.field term) d)) ) fieldsToIndex))))
+   (first (filter (fn [d] (= 0 (.compareToIgnoreCase (.field term) d)) ) fieldsToIndex))
+   
+   ;need to put getGlobalTermFreq here - since it is the heaviest and needs disk access
+   (not (< (reduce (fn [val coll] (+ val coll) )
+              0 (lazy-seq-docs (.termDocs ir term))) minfreq))
+   ))
 
 (defn _populateIndexVectors [ir nonAlphabet fieldsToIndex]
   (seq (set ( filter #(println (.text %))  (lazy-seq-terms (.terms ir)) ))))
-  ;(seq (set ( filter #(cljTermFilter % nonAlphabet fieldsToIndex)  (lazy-seq-terms (.terms ir)) ))))
+  ;(seq (set ( filter #(cljTermFilter % ir nonAlphabet fieldsToIndex)  (lazy-seq-terms (.terms ir)) ))))
 
 (defn cljTermTermVectorsFromLucene [indexDir seedLength minFreq nonAlphabet windowSize basicTermVectors fieldsToIndex]
 ;correct place for validation of arguments is in pre-conditions
@@ -66,7 +72,7 @@
           (throw (IOException. (str "Lucene indexes not built correctly." 
                                     "Term-term indexing requires a Lucene index containing TermPositionVectors." 
                                     "Try rebuilding Lucene index using pitt.search.lucene.IndexFilePositions."))))
-        (_populateIndexVectors ir nonAlphabet fieldsToIndex)
+        (_populateIndexVectors ir nonAlphabet fieldsToIndex minFreq)
         ))))
 
 (defn walk [^File dir]
@@ -94,6 +100,7 @@
   (BuildIndex/main (into-array String ["/tmp/2" ])))
 
 (defn -main [& args] 
+  ;later we will need to move *config* population inside binding to get benefits of per-thread execution
   (alter-var-root #'*config* (fn [_] (read (PushbackReader. (ds/reader "config.clj")))))
   (binding [  *stopset* (cljLoadStopWords #{}) ] 
     
@@ -101,8 +108,8 @@
     (IndexWriter/unlock (FSDirectory/open  (File. (:indexdir *config*)))) ;if not, then pre-existing "write.lock" files can cause lock-acquisition timeouts
     (println "srcdir= " (:srcdir *config*) " indexdir= " (:indexdir *config*) "stoppath= " (:stoppath *config*))
     (map println *stopset*)
-    (map index (walk (File. (:srcdir *config*))) )
+    ;(map index (walk (File. (:srcdir *config*))) )
     ;(sem-index (File. "/tmp/3") )
-    ;(with-open [ir (IndexReader/open (FSDirectory/open (File. "/tmp/3")))] 
-    ;  (_populateIndexVectors ir 0 (into-array ["n"])) )
+    (with-open [ir #^IndexReader (IndexReader/open (FSDirectory/open (File. (:indexdir *config*))))] 
+      (_populateIndexVectors ir 0 (into-array ["n"])) )
     ) )
